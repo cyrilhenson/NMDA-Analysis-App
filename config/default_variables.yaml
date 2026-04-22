@@ -1,0 +1,153 @@
+# =====================================================================
+# Default variable configuration for the NMDA Analysis App
+# =====================================================================
+#
+# QUICK GUIDE for new variables in future studies:
+#   1. Add the variable name (must match the Excel column header EXACTLY)
+#      to one of the lists below.
+#   2. continuous = numeric measurements (age, BMI, MME, length of stay,
+#      pain scores, etc.)
+#   3. categorical = group/yes-no/level variables (sex, race, ASA class,
+#      comorbidity flags, etc.)
+#   4. Use 'pretty_labels' to give a variable a nicer display name in the
+#      output tables (optional).
+#   5. Save the file. Restart the app — the new variable appears
+#      automatically.
+#
+# TIP: You don't have to edit this file at all if you prefer. The app
+# can also auto-detect variables from the uploaded Excel file and let
+# you re-classify them inside the app's "Variables" tab.
+# =====================================================================
+
+# Grouping variable (the column that defines the two comparison groups)
+group_variable: "D-NMDA"
+group_labels:
+  "0": "No D-NMDA"
+  "1": "D-NMDA"
+
+# ---------- Table 1: Baseline / Demographics ----------
+table1:
+  continuous:
+    - Age
+    - BMI
+    - Preop_MME
+  categorical:
+    - Sex
+    - Race
+    - ASA
+    - Smoking
+    - HTN
+    - DM
+    - CKD
+    - OSA
+    - COPD
+    - Afib
+    - CHF
+    - MI
+    - CVA
+
+# ---------- Table 2: Perioperative / Outcomes ----------
+table2:
+  continuous:
+    - Levels_involved
+    - Duration_surgery
+    - Total_MME_PACU
+    - MME_first_24h
+    - MME_24_48h
+    - MME_48_72h
+    - Total_MME
+    - PACU_LOS
+    - Hospital_LOS
+    - Total_fentanyl
+    - Total_hydromorphone
+    - Duration_postop_ketamine
+    - CAM4
+    - Hypoxic_events
+    - Bradypneic_events
+    - Duration_PCA
+    - Pain_score_PACU
+    - Pain_score_6h
+    - Pain_score_12h
+    - Pain_score_24h
+    - Pain_score_48h
+  categorical:
+    - PCA_used
+    - Postop_ketamine
+    - Intraop_ketamine
+    - Antiemetic_used_PACU
+    - Antiemetic_used_inpatient
+    - AMS
+    - Supplemental_O2
+
+# ---------- Multivariate regression ----------
+# Outcomes modelled with linear regression, adjusting for the covariates
+# below. Add new outcomes by simply listing more column names.
+multivariate:
+  outcomes_mme:
+    - Total_MME_PACU
+    - MME_first_24h
+    - MME_24_48h
+    - MME_48_72h
+    - Total_MME
+  outcomes_los:
+    - PACU_LOS
+    - Hospital_LOS
+  covariates:
+    - Levels_involved
+    - Duration_surgery
+    - ASA            # treated as categorical in the model
+
+# ---------- MDD / Power figure ----------
+# The variable used for the minimum-detectable-difference power curve.
+mdd:
+  outcome: Total_MME
+  unit: "MME"
+  alpha: 0.05
+
+# ---------- Pretty labels (optional) ----------
+# Use this to map raw column names -> display names in the output tables.
+pretty_labels:
+  Age: "Age"
+  BMI: "BMI"
+  Preop_MME: "Preoperative MME"
+  Sex: "Sex"
+  Race: "Race"
+  ASA: "ASA Class"
+  Smoking: "Smoking"
+  HTN: "Hypertension"
+  DM: "Diabetes mellitus"
+  CKD: "CKD"
+  OSA: "OSA"
+  COPD: "COPD"
+  Afib: "Atrial fibrillation"
+  CHF: "CHF"
+  MI: "MI"
+  CVA: "CVA"
+  Levels_involved: "Levels involved"
+  Duration_surgery: "Duration of surgery, minutes"
+  Total_MME_PACU: "MME in PACU"
+  MME_first_24h: "MME 0-24 hrs"
+  MME_24_48h: "MME 24-48 hrs"
+  MME_48_72h: "MME 48-72 hrs"
+  Total_MME: "Cumulative MME 0-72 hrs"
+  PACU_LOS: "PACU LOS, mins"
+  Hospital_LOS: "Hospital LOS, days"
+  Total_fentanyl: "Total intraoperative fentanyl, mcg"
+  Total_hydromorphone: "Total intraoperative hydromorphone, mg"
+  Intraop_ketamine: "Intraoperative ketamine"
+  Postop_ketamine: "Postoperative ketamine used"
+  Duration_postop_ketamine: "Duration of postoperative ketamine, days"
+  PCA_used: "Postoperative PCA used"
+  Duration_PCA: "Duration of PCA, days"
+  Antiemetic_used_PACU: "Antiemetic used in PACU"
+  Antiemetic_used_inpatient: "Antiemetic used inpatient"
+  AMS: "Reported AMS / delirium / hallucinations"
+  CAM4: "CAM-ICU 4-feature score"
+  Supplemental_O2: "Supplemental O2 required"
+  Hypoxic_events: "Hypoxic events"
+  Bradypneic_events: "Bradypneic events"
+  Pain_score_PACU: "Pain score PACU"
+  Pain_score_6h: "Pain score 6h postop"
+  Pain_score_12h: "Pain score 12h postop"
+  Pain_score_24h: "Pain score 24h postop"
+  Pain_score_48h: "Pain score 48h postop"

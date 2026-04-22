@@ -1,0 +1,17 @@
+============================================================ 
+  Push NMDA-Analysis-App to GitHub 
+       Trying to merge remote contents and push again... 
+ 
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[ERROR] Auto-merge failed. See log dump below for details. 
+ 
+================ FULL LOG (push_log.txt) =================== 
+ 
+============================================================ 
+  Above is the full log. It is also saved to push_log.txt 
+  Copy the most relevant lines and share them for help. 
+============================================================ 
