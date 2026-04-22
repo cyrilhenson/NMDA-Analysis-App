@@ -35,8 +35,8 @@ from exports.word_export import build_report_docx, df_to_docx_bytes
 
 APP_DIR = Path(__file__).parent
 CONFIG_PATH = APP_DIR / "config" / "default_variables.yaml"
-SAMPLE_PRIMARY = APP_DIR / "sample_data" / "Deidentified Complex Spine.xlsx"
-SAMPLE_SENSITIVITY = APP_DIR / "sample_data" / "Sensitivity analysis.xlsx"
+SAMPLE_PRIMARY = APP_DIR / "sample_data" / "Sample_Complex_Spine.xlsx"
+SAMPLE_SENSITIVITY = APP_DIR / "sample_data" / "Sample_Sensitivity.xlsx"
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +112,7 @@ primary_file = st.sidebar.file_uploader(
 )
 
 use_sample = st.sidebar.checkbox(
-    "Use bundled sample (Deidentified Complex Spine)",
+    "Use bundled sample (de-identified complex spine cohort)",
     value=primary_file is None and SAMPLE_PRIMARY.exists(),
 )
 
@@ -166,6 +166,29 @@ st.caption(
     "figure from the original R analysis pipeline. Built for clinical "
     "residents — no statistical background required."
 )
+
+with st.expander("🔒 Privacy & HIPAA notice", expanded=False):
+    st.markdown(
+        """
+        This app is designed for **de-identified datasets only**, conforming
+        to the **HIPAA Safe Harbor** standard (45 CFR §164.514(b)).
+
+        **Do not upload** files containing any of the 18 HIPAA identifiers,
+        including patient names, dates (date of birth, admission, surgery,
+        discharge), medical record numbers, addresses, phone numbers, email
+        addresses, or any other directly identifying information.
+
+        Uploaded files are processed **in memory only** for the duration of
+        your session and are never written to permanent storage on the
+        server. Closing the browser tab discards all uploaded data.
+
+        The bundled sample dataset has been further generalized — surgical
+        procedure descriptions are collapsed into broad categories
+        (e.g. "Posterior fusion", "Anterior + posterior fusion") to remove
+        any case-specific detail. Raw row-level data is never displayed in
+        the app; only aggregated summary tables and figures are shown.
+        """
+    )
 
 if df_primary is None:
     st.info(
@@ -329,10 +352,6 @@ with tabs[0]:
         else 0,
     )
     mdd_unit = st.text_input("Unit", value=cfg.get("mdd", {}).get("unit", "MME"))
-
-    st.markdown("---")
-    with st.expander("Preview raw data", expanded=False):
-        st.dataframe(df_primary.head(20), use_container_width=True)
 
 # Build Table 1 / Table 2 / multivariate results
 group_labels = {"0": group0_label, "1": group1_label}

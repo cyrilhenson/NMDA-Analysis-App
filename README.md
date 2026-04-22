@@ -115,8 +115,8 @@ NMDA-Analysis-App/
 ├── config/
 │   └── default_variables.yaml      # Variable definitions (commented)
 ├── sample_data/
-│   ├── Deidentified Complex Spine.xlsx
-│   └── Sensitivity analysis.xlsx
+│   ├── Sample_Complex_Spine.xlsx       # generalized demo cohort
+│   └── Sample_Sensitivity.xlsx         # generalized sensitivity cohort
 ├── .streamlit/config.toml          # App theme + upload limits
 ├── requirements.txt                # Python deps
 ├── run_local.bat                   # Windows one-click launcher
