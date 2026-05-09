@@ -1,5 +1,6 @@
 # =====================================================================
-# Default variable configuration for the NMDA Analysis App
+# Default variable configuration for the Complex Spine Surgery Cohort
+# Analysis App
 # =====================================================================
 #
 # QUICK GUIDE for new variables in future studies:
@@ -19,11 +20,13 @@
 # you re-classify them inside the app's "Variables" tab.
 # =====================================================================
 
-# Grouping variable (the column that defines the two comparison groups)
-group_variable: "D-NMDA"
+# Grouping variable (the column that defines the two comparison groups).
+# Exposure = 1 indicates the patient received methadone + ketamine;
+# Exposure = 0 indicates the unexposed cohort.
+group_variable: "Exposure"
 group_labels:
-  "0": "No D-NMDA"
-  "1": "D-NMDA"
+  "0": "Unexposed"
+  "1": "Exposed"
 
 # ---------- Table 1: Baseline / Demographics ----------
 table1:

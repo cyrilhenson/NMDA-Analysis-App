@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ====================================================================
-#  NMDA Analysis App - macOS / Linux one-click launcher
+#  Complex Spine Surgery Cohort Analysis - macOS / Linux one-click launcher
 #
 #  WHAT THIS DOES (only the first time):
 #   1. Checks that python3 is installed
@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 
 echo
 echo "============================================================"
-echo "  NMDA Antagonist Study - Analysis App"
+echo "  Complex Spine Surgery Cohort - Analysis App"
 echo "============================================================"
 echo
 

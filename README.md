@@ -1,7 +1,9 @@
-# NMDA Antagonist Study — Standalone Analysis App
+# Complex Spine Surgery Cohort — Standalone Analysis App
 
-A plug-and-play web app that takes a deidentified Excel dataset and instantly
-reproduces every table and figure from the original R analysis pipeline:
+A plug-and-play web app that compares the **exposed cohort** (received methadone
++ ketamine) with the **unexposed cohort** in elective complex spine surgery.
+Takes a deidentified Excel dataset and instantly reproduces every table and
+figure from the original R analysis pipeline:
 
 - **Table 1** — baseline patient & surgical characteristics
 - **Table 2** — perioperative data and outcomes
@@ -150,7 +152,7 @@ Word tables.
 - **First launch is slow** — that's the dependency install (~2 min). Every
   subsequent launch is instant.
 - **Excel file rejected** — must be `.xlsx` or `.xls`, ≤ 50 MB, and contain
-  the group column (default: `D-NMDA`) with values 0 or 1.
+  the group column (default: `Exposure`) with values 0 (unexposed) or 1 (exposed).
 - **Browser doesn't open** — manually visit
   [http://localhost:8501](http://localhost:8501).
 - **Streamlit Cloud deploy fails** — ensure `requirements.txt` is in the

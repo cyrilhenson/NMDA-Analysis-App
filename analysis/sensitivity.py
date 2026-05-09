@@ -17,7 +17,7 @@ def run_sensitivity_comparison(
     df_primary: pd.DataFrame,
     df_sensitivity: pd.DataFrame,
     outcomes: list[str],
-    group_var: str = "D-NMDA",
+    group_var: str = "Exposure",
     covariates_continuous: list[str] | None = None,
     covariates_categorical: list[str] | None = None,
     primary_label: str | None = None,

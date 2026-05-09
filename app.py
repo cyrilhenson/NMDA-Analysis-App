@@ -1,6 +1,6 @@
 """
-NMDA Antagonist Study — Standalone Analysis App
-================================================
+Complex Spine Surgery Cohort Analysis App
+=========================================
 
 Plug-and-play Streamlit app for residents to upload a deidentified
 dataset and reproduce every table/figure from the original R analysis:
@@ -43,7 +43,7 @@ SAMPLE_SENSITIVITY = APP_DIR / "sample_data" / "Sample_Sensitivity.xlsx"
 # Page setup
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="NMDA Analysis App",
+    page_title="Complex Spine Cohort Analysis",
     page_icon="💊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -132,10 +132,11 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("**Step 3. Group variable & labels**")
 group_var = st.sidebar.text_input(
     "Group column name",
-    value=cfg.get("group_variable", "D-NMDA"),
-    help="Column with binary 0/1 values defining the two comparison groups.",
+    value=cfg.get("group_variable", "Exposure"),
+    help="Column with binary 0/1 values defining the two comparison groups "
+         "(1 = exposed cohort, 0 = unexposed).",
 )
-g_labels = cfg.get("group_labels", {"0": "No D-NMDA", "1": "D-NMDA"})
+g_labels = cfg.get("group_labels", {"0": "Unexposed", "1": "Exposed"})
 group0_label = st.sidebar.text_input("Label for group=0", value=g_labels.get("0", "Group 0"))
 group1_label = st.sidebar.text_input("Label for group=1", value=g_labels.get("1", "Group 1"))
 
@@ -160,11 +161,12 @@ elif use_sample_sens and SAMPLE_SENSITIVITY.exists():
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-st.title("💊 NMDA Antagonist Study — Analysis App")
+st.title("💊 Complex Spine Surgery Cohort Analysis")
 st.caption(
-    "Upload a deidentified dataset and instantly reproduce every table and "
-    "figure from the original R analysis pipeline. Built for clinical "
-    "residents — no statistical background required."
+    "Compare the exposed cohort (received methadone + ketamine) with the "
+    "unexposed cohort. Upload a deidentified dataset and instantly reproduce "
+    "every table and figure from the original R analysis pipeline. Built for "
+    "clinical residents — no statistical background required."
 )
 
 with st.expander("🔒 Privacy & HIPAA notice", expanded=False):
@@ -200,7 +202,7 @@ if df_primary is None:
             """
             **What this app does**
             1. Reads your Excel file (must contain a binary group column,
-               e.g. `D-NMDA`).
+               e.g. `Exposure`, with values 1 = exposed and 0 = unexposed).
             2. Auto-detects continuous vs categorical variables (you can
                override this in the *Variables* tab).
             3. Runs the same statistical tests used in the published study:
@@ -523,7 +525,7 @@ with tabs[5]:
 
     _download_button(
         "⬇️ Download full Word report (.docx)",
-        word_bytes, "NMDA_Analysis_Report.docx",
+        word_bytes, "Cohort_Analysis_Report.docx",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         key="dl_full_report",
     )

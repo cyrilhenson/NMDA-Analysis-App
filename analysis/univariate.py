@@ -43,9 +43,9 @@ def _shapiro_safe(x: np.ndarray) -> float:
 def cont_summary(
     data: pd.DataFrame,
     var: str,
-    group: str = "D-NMDA",
-    group0_label: str = "No D-NMDA",
-    group1_label: str = "D-NMDA",
+    group: str = "Exposure",
+    group0_label: str = "Unexposed",
+    group1_label: str = "Exposed",
 ) -> dict:
     """Summarise a continuous variable by binary group."""
     x0 = pd.to_numeric(
@@ -107,9 +107,9 @@ def cont_summary(
 def cat_summary(
     data: pd.DataFrame,
     var: str,
-    group: str = "D-NMDA",
-    group0_label: str = "No D-NMDA",
-    group1_label: str = "D-NMDA",
+    group: str = "Exposure",
+    group0_label: str = "Unexposed",
+    group1_label: str = "Exposed",
 ) -> list[dict]:
     """Summarise a categorical variable by binary group. Returns one row per level."""
     sub = data[[var, group]].dropna(subset=[group])
@@ -185,12 +185,12 @@ def build_univariate_table(
     data: pd.DataFrame,
     continuous: list[str],
     categorical: list[str],
-    group: str = "D-NMDA",
+    group: str = "Exposure",
     group_labels: dict | None = None,
 ) -> pd.DataFrame:
     """Build a tidy univariate table for a list of continuous + categorical variables."""
     if group_labels is None:
-        group_labels = {"0": "No D-NMDA", "1": "D-NMDA"}
+        group_labels = {"0": "Unexposed", "1": "Exposed"}
     g0 = group_labels.get("0", "Group 0")
     g1 = group_labels.get("1", "Group 1")
 

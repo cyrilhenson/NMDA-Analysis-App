@@ -1,6 +1,6 @@
 @echo off
 REM ====================================================================
-REM  NMDA Analysis App - Windows one-click launcher
+REM  Complex Spine Surgery Cohort Analysis - Windows one-click launcher
 REM
 REM  WHAT THIS DOES (only the first time):
 REM   1. Checks that Python is installed
@@ -19,7 +19,7 @@ cd /d "%~dp0"
 
 echo.
 echo ============================================================
-echo   NMDA Antagonist Study - Analysis App
+echo   Complex Spine Surgery Cohort - Analysis App
 echo ============================================================
 echo.
 

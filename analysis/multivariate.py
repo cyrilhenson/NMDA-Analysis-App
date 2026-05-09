@@ -2,9 +2,9 @@
 Multivariate (linear regression) analysis.
 
 Mirrors the R code:
-  outcome ~ D-NMDA + Levels_involved + Duration_surgery + ASA (factor)
+  outcome ~ Exposure + Levels_involved + Duration_surgery + ASA (factor)
 
-Reports the D-NMDA=1 coefficient with 95% CI and p-value for each outcome.
+Reports the Exposure=1 coefficient with 95% CI and p-value for each outcome.
 """
 
 from __future__ import annotations
@@ -76,7 +76,7 @@ def _fit_linear(
 
     fit = ols(formula, data=work_aliased).fit()
 
-    # Find the D-NMDA=1 term
+    # Find the Exposure=1 (exposed-cohort) term
     target_prefixes = (
         f"C({alias[group_var]})[T.1]",
         f"C({alias[group_var]})[T.1.0]",
@@ -129,7 +129,7 @@ def _fit_linear(
 def run_multivariate(
     df: pd.DataFrame,
     outcomes: list[str],
-    group_var: str = "D-NMDA",
+    group_var: str = "Exposure",
     covariates_continuous: list[str] | None = None,
     covariates_categorical: list[str] | None = None,
 ) -> pd.DataFrame:

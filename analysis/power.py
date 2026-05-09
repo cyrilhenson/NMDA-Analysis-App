@@ -54,7 +54,7 @@ def _solve_d_for_power(target: float, n1: int, n2: int, alpha: float = 0.05) -> 
 def compute_mdd(
     df: pd.DataFrame,
     outcome: str = "Total_MME",
-    group_var: str = "D-NMDA",
+    group_var: str = "Exposure",
     alpha: float = 0.05,
 ) -> dict:
     """Compute pooled SD and MDD at 80% / 90% power."""
@@ -88,8 +88,8 @@ def compute_mdd(
 def make_mdd_figure(
     mdd: dict,
     unit: str = "MME",
-    group0_label: str = "No D-NMDA",
-    group1_label: str = "D-NMDA",
+    group0_label: str = "Unexposed",
+    group1_label: str = "Exposed",
     title_outcome: str = "Total Opioid Consumption",
 ):
     """Build the MDD power curve figure. Returns the matplotlib Figure."""
