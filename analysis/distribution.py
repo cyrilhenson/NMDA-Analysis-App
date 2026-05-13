@@ -254,9 +254,10 @@ def make_mme_strip_plot(
             df.loc[df[group_var] == 1, var], errors="coerce"
         ).dropna().to_numpy()
 
-        # X positions of the two "columns" of dots and their I-beams
-        x_dot_0, x_bar_0 = 1.10, 0.80
-        x_dot_1, x_bar_1 = 2.10, 1.80
+        # X positions of the two "columns" — dots and their I-beams share
+        # the same X so the error-bar sits centered on the dot column.
+        x_dot_0 = x_bar_0 = 1.10
+        x_dot_1 = x_bar_1 = 2.10
 
         # Dots stack vertically at a single X per group. Overlapping patients
         # at the same Y compound via alpha layering, producing a darker spot
@@ -272,26 +273,32 @@ def make_mme_strip_plot(
             edgecolors="white", linewidths=0.6, zorder=3,
         )
 
-        # Optional median + IQR I-beam to the left of each column
+        # Optional median + IQR I-beam centered on each dot column.
+        # Drawn with high zorder so the median bar and caps remain visible
+        # on top of the dot cluster.
         if show_error_bars:
             def _draw_errorbar(values, x_center, line_color,
-                               cap_half_width=0.05, median_half_width=0.13):
+                               cap_half_width=0.13, median_half_width=0.18):
                 if len(values) == 0:
                     return
                 q1, med, q3 = np.percentile(values, [25, 50, 75])
+                # Vertical IQR line (sits behind dots, partially hidden by
+                # the densest part — caps + median bar carry the message).
                 ax.vlines(x_center, q1, q3, color=line_color,
-                          linewidth=2.0, zorder=4)
+                          linewidth=2.0, zorder=6)
+                # Q1 and Q3 caps — extend past dot column so they stand out
                 ax.hlines([q1, q3],
                           xmin=x_center - cap_half_width,
                           xmax=x_center + cap_half_width,
-                          color=line_color, linewidth=2.0, zorder=4)
+                          color=line_color, linewidth=2.0, zorder=6)
+                # Median bar — widest, drawn last on top of everything
                 ax.hlines(med,
                           xmin=x_center - median_half_width,
                           xmax=x_center + median_half_width,
-                          color=line_color, linewidth=2.8, zorder=5)
+                          color=line_color, linewidth=3.0, zorder=7)
 
-            _draw_errorbar(x0, x_bar_0, "#1f3d54")
-            _draw_errorbar(x1, x_bar_1, "#8a4d0f")
+            _draw_errorbar(x0, x_bar_0, "black")
+            _draw_errorbar(x1, x_bar_1, "black")
 
         # Mann-Whitney U
         try:
@@ -309,7 +316,7 @@ def make_mme_strip_plot(
         ax.set_ylabel(unit)
         ax.grid(True, axis="y", linestyle="--", alpha=0.4)
         ax.set_axisbelow(True)
-        ax.set_xlim(0.55, 2.45)
+        ax.set_xlim(0.7, 2.5)
 
     for j in range(n, len(axes)):
         axes[j].set_visible(False)
