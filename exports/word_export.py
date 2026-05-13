@@ -127,6 +127,7 @@ def build_report_docx(
     sensitivity_results: dict | None,
     mdd: dict | None,
     figure_png_bytes: bytes | None,
+    mme_distribution_png_bytes: bytes | None = None,
     group0_label: str,
     group1_label: str,
     pretty_labels: dict | None = None,
@@ -269,11 +270,31 @@ def build_report_docx(
                    "and ASA class. * p < 0.05.",
         )
 
+    # ---- MME distribution figure ----
+    if mme_distribution_png_bytes is not None:
+        doc.add_paragraph()
+        p = doc.add_paragraph()
+        run = p.add_run(
+            f"Figure 1. MME distribution by exposure group "
+            f"({group1_label} vs {group0_label})"
+        )
+        run.bold = True
+        run.font.size = Pt(11)
+        doc.add_picture(BytesIO(mme_distribution_png_bytes), width=None)
+        cap = doc.add_paragraph()
+        run = cap.add_run(
+            "Each dot represents one patient. Horizontal jitter is cosmetic. "
+            "Short horizontal bars indicate the group median. P-values from "
+            "Mann-Whitney U test."
+        )
+        run.italic = True
+
     # ---- MDD figure ----
     if figure_png_bytes is not None:
         doc.add_paragraph()
         p = doc.add_paragraph()
-        run = p.add_run("Figure 1. Power vs. Detectable Difference")
+        fig_num = 2 if mme_distribution_png_bytes is not None else 1
+        run = p.add_run(f"Figure {fig_num}. Power vs. Detectable Difference")
         run.bold = True
         run.font.size = Pt(11)
         doc.add_picture(BytesIO(figure_png_bytes), width=None)

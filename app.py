@@ -30,6 +30,11 @@ from analysis.univariate import build_univariate_table
 from analysis.multivariate import run_multivariate
 from analysis.sensitivity import run_sensitivity_comparison
 from analysis.power import compute_mdd, make_mdd_figure, fig_to_bytes
+from analysis.distribution import (
+    detect_mme_variables,
+    make_mme_distribution_figure,
+    fig_to_bytes as dist_fig_to_bytes,
+)
 from exports.word_export import build_report_docx, df_to_docx_bytes
 
 
@@ -268,6 +273,7 @@ tabs = st.tabs([
     "🧪 Variables",
     "📋 Table 1 (baseline)",
     "📊 Table 2 (perioperative)",
+    "🔬 MME distribution",
     "📈 Multivariate / Sensitivity",
     "⚡ Power (MDD figure)",
     "📥 Download report",
@@ -440,8 +446,63 @@ with tabs[2]:
             key="dl_t2_docx",
         )
 
-# ---------- Multivariate / Sensitivity ----------
+# ---------- MME distribution (scatter) ----------
+mme_dist_png = None   # made available to the combined Word report below
+mme_dist_pdf = None
+
 with tabs[3]:
+    st.subheader(f"MME Distribution — {group1_label} vs {group0_label}")
+    st.caption(
+        "Each dot is one patient. Horizontal jitter is cosmetic so overlapping "
+        "values stay visible. The short horizontal bar marks the group median. "
+        "P-values from Mann-Whitney U (robust to non-normal MME data)."
+    )
+
+    detected_mme = detect_mme_variables(df_primary)
+    if not detected_mme:
+        st.info(
+            "No MME columns detected in the dataset. Use the *Variables* tab "
+            "to confirm what's present, then return here."
+        )
+    else:
+        mme_vars = st.multiselect(
+            "MME variables to plot",
+            options=detected_mme,
+            default=detected_mme,
+            key="mme_dist_vars",
+            help="Defaults to every numeric column whose name contains 'MME'.",
+        )
+
+        dist_fig = make_mme_distribution_figure(
+            df_primary,
+            variables=mme_vars,
+            group_var=group_var,
+            group0_label=group0_label,
+            group1_label=group1_label,
+            pretty_labels=cfg.get("pretty_labels", {}),
+            unit=mdd_unit,
+        )
+        st.pyplot(dist_fig, use_container_width=True)
+
+        if mme_vars:
+            mme_dist_png = dist_fig_to_bytes(dist_fig, "png")
+            mme_dist_pdf = dist_fig_to_bytes(dist_fig, "pdf")
+            cA, cB = st.columns(2)
+            with cA:
+                _download_button(
+                    "⬇️ MME distribution (PNG, 300dpi)",
+                    mme_dist_png, "MME_Distribution.png", "image/png",
+                    key="dl_dist_png",
+                )
+            with cB:
+                _download_button(
+                    "⬇️ MME distribution (PDF)",
+                    mme_dist_pdf, "MME_Distribution.pdf", "application/pdf",
+                    key="dl_dist_pdf",
+                )
+
+# ---------- Multivariate / Sensitivity ----------
+with tabs[4]:
     st.subheader("Multivariate Linear Regression")
     show_cols = ["Outcome", "Estimate (95% CI)", "p-value", "n"]
     st.dataframe(multivariate_df[show_cols], use_container_width=True, hide_index=True)
@@ -475,7 +536,7 @@ with tabs[3]:
             )
 
 # ---------- Power figure ----------
-with tabs[4]:
+with tabs[5]:
     st.subheader("Minimum Detectable Difference — Power Curve")
     cA, cB, cC = st.columns(3)
     cA.metric("Pooled SD", f"{mdd['pooled_sd']:.1f} {mdd_unit}")
@@ -502,7 +563,7 @@ with tabs[4]:
         )
 
 # ---------- Download report ----------
-with tabs[5]:
+with tabs[6]:
     st.subheader("📥 Combined Word report")
     st.write(
         "One-click download containing every table and figure above, formatted "
@@ -516,6 +577,7 @@ with tabs[5]:
         sensitivity_results=sensitivity_results,
         mdd={**mdd, "unit": mdd_unit},
         figure_png_bytes=fig_png,
+        mme_distribution_png_bytes=mme_dist_png,
         group0_label=group0_label,
         group1_label=group1_label,
         pretty_labels=cfg.get("pretty_labels", {}),
