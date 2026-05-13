@@ -456,10 +456,11 @@ with tabs[3]:
     st.subheader(f"MME vs covariate — {group1_label} vs {group0_label}")
     st.caption(
         "Each dot is one patient, colored by exposure group. Solid lines are "
-        "least-squares regression fits per group. R² shows how strongly the "
-        "X-axis predictor explains MME within each group; the p-value at the "
-        "top of each subplot is a Mann-Whitney U comparing the overall MME "
-        "distribution between groups."
+        "least-squares regression fits per group, with a shaded 95% confidence "
+        "band around each fit. R² shows how strongly the X-axis predictor "
+        "explains MME within each group; the p-value at the top of each "
+        "subplot is a Mann-Whitney U comparing the overall MME distribution "
+        "between groups."
     )
 
     detected_mme = detect_mme_variables(df_primary)
@@ -541,9 +542,10 @@ with tabs[4]:
     st.subheader(f"MME by group — {group1_label} vs {group0_label}")
     st.caption(
         "Each dot is one patient. Horizontal jitter is purely cosmetic so "
-        "overlapping values stay visible. The short horizontal bar marks "
-        "the group median. P-values from Mann-Whitney U (robust to "
-        "non-normal MME data)."
+        "overlapping values stay visible. The I-beam to the left of each "
+        "cloud shows the group median (thick bar) and interquartile range "
+        "(Q1 to Q3, vertical line with caps). P-values from Mann-Whitney U "
+        "(robust to non-normal MME data)."
     )
 
     if not detect_mme_variables(df_primary):

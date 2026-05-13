@@ -62,6 +62,37 @@ def _fit_line(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, flo
     return x_line, y_line, res.rvalue ** 2
 
 
+def _fit_line_with_band(
+    x: np.ndarray, y: np.ndarray, alpha: float = 0.05, n_grid: int = 80
+):
+    """Fit y = m·x + b and compute a 95% CI band for the mean prediction.
+
+    Returns (x_grid, y_fit, y_lo, y_hi, r²) or None if too few points.
+    """
+    n = len(x)
+    if n < 3:  # need at least 3 points for a meaningful CI
+        return None
+    if np.allclose(x, x[0]):
+        return None
+    res = stats.linregress(x, y)
+    x_grid = np.linspace(x.min(), x.max(), n_grid)
+    y_fit = res.intercept + res.slope * x_grid
+
+    # Standard error of the mean prediction at each x:
+    #   SE = s · sqrt( 1/n + (x - x̄)² / Σ(xᵢ - x̄)² )
+    x_mean = x.mean()
+    s_xx = np.sum((x - x_mean) ** 2)
+    y_pred = res.intercept + res.slope * x
+    residuals = y - y_pred
+    df = n - 2
+    s = np.sqrt(np.sum(residuals ** 2) / df) if df > 0 else 0.0
+    se = s * np.sqrt(1.0 / n + (x_grid - x_mean) ** 2 / s_xx)
+    t_crit = stats.t.ppf(1.0 - alpha / 2.0, df) if df > 0 else 0.0
+    y_lo = y_fit - t_crit * se
+    y_hi = y_fit + t_crit * se
+    return x_grid, y_fit, y_lo, y_hi, res.rvalue ** 2
+
+
 def make_mme_distribution_figure(
     df: pd.DataFrame,
     x_var: str,
@@ -124,18 +155,24 @@ def make_mme_distribution_figure(
             zorder=3,
         )
 
-        # Regression lines per group
+        # Regression lines + 95% CI bands per group
         r2_parts = []
         if show_regression:
-            fit0 = _fit_line(x0, y0)
-            fit1 = _fit_line(x1, y1)
+            fit0 = _fit_line_with_band(x0, y0)
+            fit1 = _fit_line_with_band(x1, y1)
             if fit0 is not None:
-                xl, yl, r2 = fit0
-                ax.plot(xl, yl, color=_COLOR_GROUP0, linewidth=2.0, alpha=0.9, zorder=2)
+                xg, yf, ylo, yhi, r2 = fit0
+                ax.fill_between(xg, ylo, yhi, color=_COLOR_GROUP0,
+                                alpha=0.15, zorder=1, linewidth=0)
+                ax.plot(xg, yf, color=_COLOR_GROUP0, linewidth=2.0,
+                        alpha=0.95, zorder=2)
                 r2_parts.append(f"{group0_label} R² = {r2:.2f}")
             if fit1 is not None:
-                xl, yl, r2 = fit1
-                ax.plot(xl, yl, color=_COLOR_GROUP1, linewidth=2.0, alpha=0.9, zorder=2)
+                xg, yf, ylo, yhi, r2 = fit1
+                ax.fill_between(xg, ylo, yhi, color=_COLOR_GROUP1,
+                                alpha=0.18, zorder=1, linewidth=0)
+                ax.plot(xg, yf, color=_COLOR_GROUP1, linewidth=2.0,
+                        alpha=0.95, zorder=2)
                 r2_parts.append(f"{group1_label} R² = {r2:.2f}")
 
         # Mann-Whitney U on the Y variable (still useful as overall group comparison)
@@ -216,29 +253,43 @@ def make_mme_strip_plot(
             df.loc[df[group_var] == 1, var], errors="coerce"
         ).dropna().to_numpy()
 
-        # Jittered scatter — one dot per patient
+        # Jittered scatter — one dot per patient (slightly right of center
+        # so the IQR error-bar at center is fully visible)
         ax.scatter(
-            1 + rng.uniform(-0.18, 0.18, len(x0)), x0,
+            1.18 + rng.uniform(-0.13, 0.13, len(x0)), x0,
             color=_COLOR_GROUP0, alpha=0.78, s=42,
             edgecolors="white", linewidths=0.7, zorder=3,
         )
         ax.scatter(
-            2 + rng.uniform(-0.18, 0.18, len(x1)), x1,
+            2.18 + rng.uniform(-0.13, 0.13, len(x1)), x1,
             color=_COLOR_GROUP1, alpha=0.85, s=42,
             edgecolors="white", linewidths=0.7, zorder=3,
         )
 
-        # Median bars
-        if len(x0):
-            ax.hlines(
-                np.median(x0), xmin=0.70, xmax=1.30,
-                color="#1f3d54", linewidth=2.2, zorder=4,
-            )
-        if len(x1):
-            ax.hlines(
-                np.median(x1), xmin=1.70, xmax=2.30,
-                color="#8a4d0f", linewidth=2.2, zorder=4,
-            )
+        # Median + IQR error bars (Q1-Q3), placed to the left of each cloud.
+        # Classic "I-beam" shape: vertical IQR line with caps at Q1 and Q3,
+        # plus a wider horizontal median bar.
+        def _draw_errorbar(values, x_center, line_color, cap_half_width=0.05,
+                           median_half_width=0.13):
+            if len(values) == 0:
+                return
+            q1, med, q3 = np.percentile(values, [25, 50, 75])
+            # Vertical IQR line
+            ax.vlines(x_center, q1, q3, color=line_color,
+                      linewidth=2.0, zorder=4)
+            # Q1 and Q3 caps
+            ax.hlines([q1, q3],
+                      xmin=x_center - cap_half_width,
+                      xmax=x_center + cap_half_width,
+                      color=line_color, linewidth=2.0, zorder=4)
+            # Median (slightly wider, drawn last so it sits on top)
+            ax.hlines(med,
+                      xmin=x_center - median_half_width,
+                      xmax=x_center + median_half_width,
+                      color=line_color, linewidth=2.8, zorder=5)
+
+        _draw_errorbar(x0, 0.85, "#1f3d54")
+        _draw_errorbar(x1, 1.85, "#8a4d0f")
 
         # Mann-Whitney U
         try:
