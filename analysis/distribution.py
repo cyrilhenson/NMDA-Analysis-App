@@ -1,14 +1,22 @@
 """
-MME distribution scatter plots.
+MME distribution figures.
 
-Classic XY scatter: a continuous predictor on the X-axis (default: duration
-of surgery), an MME variable on the Y-axis, points colored by exposure
-group, with a least-squares regression line fitted per group. This makes
-trends easy to read at a glance — e.g. "do exposed patients sit below the
-unexposed regression line at every level of surgical complexity?"
+Two complementary views:
 
-Designed for clinical residents — small-N safe, publication-friendly
-layout, matches the app's colour palette.
+  * make_mme_distribution_figure(...) — classic XY scatter. A continuous
+    predictor on the X-axis (default: duration of surgery), an MME
+    variable on the Y-axis, points coloured by exposure group, with a
+    least-squares regression line fitted per group. Useful for "does the
+    relationship between surgery complexity and MME shift between groups?"
+
+  * make_mme_strip_plot(...) — categorical-X strip plot. One column per
+    exposure group, each patient is a single dot at their MME value, with
+    horizontal jitter for visibility and a short bar at the group median.
+    Useful for "how spread out is MME within each group?"
+
+Both share colour palette, p-value formatting, and small-N safety. Designed
+for clinical residents — publication-friendly defaults, configurable
+variable selection in the app.
 """
 
 from __future__ import annotations
@@ -160,6 +168,101 @@ def make_mme_distribution_figure(
 
     fig.suptitle(
         f"MME vs {x_label} — by exposure group",
+        fontsize=14, y=1.00,
+    )
+    fig.tight_layout()
+    return fig
+
+
+def make_mme_strip_plot(
+    df: pd.DataFrame,
+    variables: list[str],
+    group_var: str = "Exposure",
+    group0_label: str = "Unexposed",
+    group1_label: str = "Exposed",
+    pretty_labels: dict | None = None,
+    unit: str = "MME",
+):
+    """Categorical-X strip plot: one column per exposure group, each patient
+    a single jittered dot. A short horizontal bar marks the group median.
+
+    Returns a matplotlib Figure. The grid auto-sizes (max 3 columns).
+    Mann-Whitney U p-value annotated in each subplot title.
+    """
+    if not variables:
+        fig, ax = plt.subplots(figsize=(6, 3))
+        ax.text(0.5, 0.5, "Select one or more MME variables to plot",
+                ha="center", va="center", transform=ax.transAxes, fontsize=12)
+        ax.set_axis_off()
+        return fig
+
+    pretty_labels = pretty_labels or {}
+    n = len(variables)
+    ncols = min(3, n)
+    nrows = (n + ncols - 1) // ncols
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(4.5 * ncols, 4.2 * nrows), squeeze=False
+    )
+    axes = axes.flatten()
+
+    rng = np.random.RandomState(42)  # reproducible jitter
+
+    for i, var in enumerate(variables):
+        ax = axes[i]
+        x0 = pd.to_numeric(
+            df.loc[df[group_var] == 0, var], errors="coerce"
+        ).dropna().to_numpy()
+        x1 = pd.to_numeric(
+            df.loc[df[group_var] == 1, var], errors="coerce"
+        ).dropna().to_numpy()
+
+        # Jittered scatter — one dot per patient
+        ax.scatter(
+            1 + rng.uniform(-0.18, 0.18, len(x0)), x0,
+            color=_COLOR_GROUP0, alpha=0.78, s=42,
+            edgecolors="white", linewidths=0.7, zorder=3,
+        )
+        ax.scatter(
+            2 + rng.uniform(-0.18, 0.18, len(x1)), x1,
+            color=_COLOR_GROUP1, alpha=0.85, s=42,
+            edgecolors="white", linewidths=0.7, zorder=3,
+        )
+
+        # Median bars
+        if len(x0):
+            ax.hlines(
+                np.median(x0), xmin=0.70, xmax=1.30,
+                color="#1f3d54", linewidth=2.2, zorder=4,
+            )
+        if len(x1):
+            ax.hlines(
+                np.median(x1), xmin=1.70, xmax=2.30,
+                color="#8a4d0f", linewidth=2.2, zorder=4,
+            )
+
+        # Mann-Whitney U
+        try:
+            _, p = stats.mannwhitneyu(x0, x1, alternative="two-sided")
+        except Exception:
+            p = float("nan")
+
+        ax.set_xticks([1, 2])
+        ax.set_xticklabels([
+            f"{group0_label}\n(n = {len(x0)})",
+            f"{group1_label}\n(n = {len(x1)})",
+        ])
+        title = pretty_labels.get(var, var)
+        ax.set_title(f"{title}\n{_fmt_p(p)}", fontsize=11)
+        ax.set_ylabel(unit)
+        ax.grid(True, axis="y", linestyle="--", alpha=0.4)
+        ax.set_axisbelow(True)
+        ax.set_xlim(0.4, 2.6)
+
+    for j in range(n, len(axes)):
+        axes[j].set_visible(False)
+
+    fig.suptitle(
+        f"MME by exposure group — {group1_label} vs {group0_label}",
         fontsize=14, y=1.00,
     )
     fig.tight_layout()

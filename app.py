@@ -33,6 +33,7 @@ from analysis.power import compute_mdd, make_mdd_figure, fig_to_bytes
 from analysis.distribution import (
     detect_mme_variables,
     make_mme_distribution_figure,
+    make_mme_strip_plot,
     fig_to_bytes as dist_fig_to_bytes,
 )
 from exports.word_export import build_report_docx, df_to_docx_bytes
@@ -273,7 +274,8 @@ tabs = st.tabs([
     "🧪 Variables",
     "📋 Table 1 (baseline)",
     "📊 Table 2 (perioperative)",
-    "🔬 MME distribution",
+    "🔬 MME vs covariate",
+    "📍 MME by group",
     "📈 Multivariate / Sensitivity",
     "⚡ Power (MDD figure)",
     "📥 Download report",
@@ -451,7 +453,7 @@ mme_dist_png = None   # made available to the combined Word report below
 mme_dist_pdf = None
 
 with tabs[3]:
-    st.subheader(f"MME Distribution — {group1_label} vs {group0_label}")
+    st.subheader(f"MME vs covariate — {group1_label} vs {group0_label}")
     st.caption(
         "Each dot is one patient, colored by exposure group. Solid lines are "
         "least-squares regression fits per group. R² shows how strongly the "
@@ -531,8 +533,63 @@ with tabs[3]:
                     key="dl_dist_pdf",
                 )
 
-# ---------- Multivariate / Sensitivity ----------
+# ---------- MME by group (strip plot) ----------
+mme_strip_png = None   # made available to the combined Word report below
+mme_strip_pdf = None
+
 with tabs[4]:
+    st.subheader(f"MME by group — {group1_label} vs {group0_label}")
+    st.caption(
+        "Each dot is one patient. Horizontal jitter is purely cosmetic so "
+        "overlapping values stay visible. The short horizontal bar marks "
+        "the group median. P-values from Mann-Whitney U (robust to "
+        "non-normal MME data)."
+    )
+
+    if not detect_mme_variables(df_primary):
+        st.info(
+            "No MME columns detected in the dataset. Use the *Variables* tab "
+            "to confirm what's present, then return here."
+        )
+    else:
+        strip_vars = st.multiselect(
+            "MME variables to plot",
+            options=detect_mme_variables(df_primary),
+            default=detect_mme_variables(df_primary),
+            key="mme_strip_vars",
+            help="Defaults to every numeric column whose name contains 'MME'.",
+        )
+
+        strip_fig = make_mme_strip_plot(
+            df_primary,
+            variables=strip_vars,
+            group_var=group_var,
+            group0_label=group0_label,
+            group1_label=group1_label,
+            pretty_labels=cfg.get("pretty_labels", {}),
+            unit=mdd_unit,
+        )
+        st.pyplot(strip_fig, use_container_width=True)
+
+        if strip_vars:
+            mme_strip_png = dist_fig_to_bytes(strip_fig, "png")
+            mme_strip_pdf = dist_fig_to_bytes(strip_fig, "pdf")
+            sA, sB = st.columns(2)
+            with sA:
+                _download_button(
+                    "⬇️ MME by group (PNG, 300dpi)",
+                    mme_strip_png, "MME_by_group.png", "image/png",
+                    key="dl_strip_png",
+                )
+            with sB:
+                _download_button(
+                    "⬇️ MME by group (PDF)",
+                    mme_strip_pdf, "MME_by_group.pdf", "application/pdf",
+                    key="dl_strip_pdf",
+                )
+
+# ---------- Multivariate / Sensitivity ----------
+with tabs[5]:
     st.subheader("Multivariate Linear Regression")
     show_cols = ["Outcome", "Estimate (95% CI)", "p-value", "n"]
     st.dataframe(multivariate_df[show_cols], use_container_width=True, hide_index=True)
@@ -566,7 +623,7 @@ with tabs[4]:
             )
 
 # ---------- Power figure ----------
-with tabs[5]:
+with tabs[6]:
     st.subheader("Minimum Detectable Difference — Power Curve")
     cA, cB, cC = st.columns(3)
     cA.metric("Pooled SD", f"{mdd['pooled_sd']:.1f} {mdd_unit}")
@@ -593,7 +650,7 @@ with tabs[5]:
         )
 
 # ---------- Download report ----------
-with tabs[6]:
+with tabs[7]:
     st.subheader("📥 Combined Word report")
     st.write(
         "One-click download containing every table and figure above, formatted "
