@@ -1,14 +1,14 @@
 """
-MME distribution figures.
+MME distribution scatter plots.
 
-Side-by-side scatter / strip plots comparing the unexposed and exposed
-groups for each selected MME variable. Each dot is one patient; horizontal
-jitter is purely cosmetic so overlapping values are visible. A short
-horizontal line marks the group median.
+Classic XY scatter: a continuous predictor on the X-axis (default: duration
+of surgery), an MME variable on the Y-axis, points colored by exposure
+group, with a least-squares regression line fitted per group. This makes
+trends easy to read at a glance — e.g. "do exposed patients sit below the
+unexposed regression line at every level of surgical complexity?"
 
-Designed for clinical residents — small-N safe (individual points stay
-visible), publication-friendly layout, matches the colour palette of the
-rest of the app.
+Designed for clinical residents — small-N safe, publication-friendly
+layout, matches the app's colour palette.
 """
 
 from __future__ import annotations
@@ -21,9 +21,8 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 
-# Colour palette aligned with the app theme
-_COLOR_GROUP0 = "#4a8fc2"   # blue-ish, used for the unexposed group
-_COLOR_GROUP1 = "#e89a4a"   # warm orange for the exposed group
+_COLOR_GROUP0 = "#2c5d8a"   # deeper blue for the unexposed group
+_COLOR_GROUP1 = "#d97a2a"   # warm orange for the exposed group
 
 
 def detect_mme_variables(df: pd.DataFrame) -> list[str]:
@@ -42,26 +41,35 @@ def _fmt_p(p: float) -> str:
     return f"p = {p:.3f}"
 
 
+def _fit_line(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, float] | None:
+    """Fit y = m·x + b by least squares. Returns (x_line, y_line, r²) or None."""
+    if len(x) < 2:
+        return None
+    # Guard against zero-variance X (all same value) which crashes linregress
+    if np.allclose(x, x[0]):
+        return None
+    res = stats.linregress(x, y)
+    x_line = np.array([x.min(), x.max()])
+    y_line = res.intercept + res.slope * x_line
+    return x_line, y_line, res.rvalue ** 2
+
+
 def make_mme_distribution_figure(
     df: pd.DataFrame,
-    variables: list[str],
+    x_var: str,
+    y_vars: list[str],
     group_var: str = "Exposure",
     group0_label: str = "Unexposed",
     group1_label: str = "Exposed",
     pretty_labels: dict | None = None,
-    unit: str = "MME",
+    show_regression: bool = True,
 ):
-    """Build a grid of box + strip plots for the given MME variables.
+    """Build a grid of scatter plots (y_vars vs x_var, colored by group_var).
 
-    Returns a matplotlib Figure. The grid auto-sizes (3 columns max).
-    Each subplot shows:
-      - Box plot (median, IQR, whiskers) for each group
-      - Jittered individual data points
-      - n per group on the x-axis labels
-      - Mann-Whitney U p-value in the subplot title
+    One subplot per Y variable. Returns a matplotlib Figure.
+    The grid auto-sizes (max 2 columns so each plot stays readable).
     """
-    if not variables:
-        # Empty placeholder figure
+    if not y_vars:
         fig, ax = plt.subplots(figsize=(6, 3))
         ax.text(0.5, 0.5, "Select one or more MME variables to plot",
                 ha="center", va="center", transform=ax.transAxes, fontsize=12)
@@ -69,74 +77,89 @@ def make_mme_distribution_figure(
         return fig
 
     pretty_labels = pretty_labels or {}
-    n = len(variables)
-    ncols = min(3, n)
+    n = len(y_vars)
+    ncols = min(2, n)
     nrows = (n + ncols - 1) // ncols
     fig, axes = plt.subplots(
-        nrows, ncols, figsize=(4.5 * ncols, 4.2 * nrows), squeeze=False
+        nrows, ncols, figsize=(6.0 * ncols, 4.5 * nrows), squeeze=False
     )
     axes = axes.flatten()
 
-    rng = np.random.RandomState(42)  # reproducible jitter
+    x_label = pretty_labels.get(x_var, x_var)
 
-    for i, var in enumerate(variables):
+    for i, y_var in enumerate(y_vars):
         ax = axes[i]
-        x0 = pd.to_numeric(
-            df.loc[df[group_var] == 0, var], errors="coerce"
-        ).dropna().to_numpy()
-        x1 = pd.to_numeric(
-            df.loc[df[group_var] == 1, var], errors="coerce"
-        ).dropna().to_numpy()
+        # Pull x/y for each group, dropping rows missing either value
+        sub = df[[x_var, y_var, group_var]].copy()
+        sub[x_var] = pd.to_numeric(sub[x_var], errors="coerce")
+        sub[y_var] = pd.to_numeric(sub[y_var], errors="coerce")
+        sub = sub.dropna(subset=[x_var, y_var, group_var])
 
-        # Scatter: one dot per patient, horizontal jitter for visibility
+        x0 = sub.loc[sub[group_var] == 0, x_var].to_numpy()
+        y0 = sub.loc[sub[group_var] == 0, y_var].to_numpy()
+        x1 = sub.loc[sub[group_var] == 1, x_var].to_numpy()
+        y1 = sub.loc[sub[group_var] == 1, y_var].to_numpy()
+
+        # Scatter
         ax.scatter(
-            1 + rng.uniform(-0.18, 0.18, len(x0)), x0,
-            color=_COLOR_GROUP0, alpha=0.75, s=36, zorder=3,
+            x0, y0,
+            color=_COLOR_GROUP0, alpha=0.75, s=42,
             edgecolors="white", linewidths=0.7,
+            label=f"{group0_label} (n = {len(x0)})",
+            zorder=3,
         )
         ax.scatter(
-            2 + rng.uniform(-0.18, 0.18, len(x1)), x1,
-            color=_COLOR_GROUP1, alpha=0.75, s=36, zorder=3,
+            x1, y1,
+            color=_COLOR_GROUP1, alpha=0.85, s=42,
             edgecolors="white", linewidths=0.7,
+            label=f"{group1_label} (n = {len(x1)})",
+            zorder=3,
         )
 
-        # Short horizontal line at each group's median
-        if len(x0):
-            ax.hlines(
-                np.median(x0), xmin=0.70, xmax=1.30,
-                color="#1f3d54", linewidth=2.0, zorder=4,
-            )
-        if len(x1):
-            ax.hlines(
-                np.median(x1), xmin=1.70, xmax=2.30,
-                color="#8a4d0f", linewidth=2.0, zorder=4,
-            )
+        # Regression lines per group
+        r2_parts = []
+        if show_regression:
+            fit0 = _fit_line(x0, y0)
+            fit1 = _fit_line(x1, y1)
+            if fit0 is not None:
+                xl, yl, r2 = fit0
+                ax.plot(xl, yl, color=_COLOR_GROUP0, linewidth=2.0, alpha=0.9, zorder=2)
+                r2_parts.append(f"{group0_label} R² = {r2:.2f}")
+            if fit1 is not None:
+                xl, yl, r2 = fit1
+                ax.plot(xl, yl, color=_COLOR_GROUP1, linewidth=2.0, alpha=0.9, zorder=2)
+                r2_parts.append(f"{group1_label} R² = {r2:.2f}")
 
-        # Mann-Whitney U (robust to non-normal MME data)
+        # Mann-Whitney U on the Y variable (still useful as overall group comparison)
         try:
-            _, p = stats.mannwhitneyu(x0, x1, alternative="two-sided")
+            _, p = stats.mannwhitneyu(y0, y1, alternative="two-sided")
         except Exception:
             p = float("nan")
 
-        # Axis cosmetics
-        ax.set_xticks([1, 2])
-        ax.set_xticklabels([
-            f"{group0_label}\n(n = {len(x0)})",
-            f"{group1_label}\n(n = {len(x1)})",
-        ])
-        title = pretty_labels.get(var, var)
-        ax.set_title(f"{title}\n{_fmt_p(p)}", fontsize=11)
-        ax.set_ylabel(unit)
-        ax.grid(True, axis="y", linestyle="--", alpha=0.4)
+        y_title = pretty_labels.get(y_var, y_var)
+        ax.set_title(f"{y_title}    {_fmt_p(p)}", fontsize=11)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_title)
+        ax.grid(True, linestyle="--", alpha=0.4)
         ax.set_axisbelow(True)
-        ax.set_xlim(0.4, 2.6)
+        ax.legend(loc="best", fontsize=9, framealpha=0.85)
 
-    # Hide any unused subplots in the grid
+        if r2_parts:
+            # R² annotation below the title
+            ax.text(
+                0.02, 0.98, "   ".join(r2_parts),
+                transform=ax.transAxes,
+                fontsize=8, va="top", ha="left",
+                color="#444444",
+                bbox=dict(facecolor="white", edgecolor="none", alpha=0.7),
+            )
+
+    # Hide unused subplots
     for j in range(n, len(axes)):
         axes[j].set_visible(False)
 
     fig.suptitle(
-        f"MME distribution — {group1_label} vs {group0_label}",
+        f"MME vs {x_label} — by exposure group",
         fontsize=14, y=1.00,
     )
     fig.tight_layout()

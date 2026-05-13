@@ -453,9 +453,11 @@ mme_dist_pdf = None
 with tabs[3]:
     st.subheader(f"MME Distribution — {group1_label} vs {group0_label}")
     st.caption(
-        "Each dot is one patient. Horizontal jitter is cosmetic so overlapping "
-        "values stay visible. The short horizontal bar marks the group median. "
-        "P-values from Mann-Whitney U (robust to non-normal MME data)."
+        "Each dot is one patient, colored by exposure group. Solid lines are "
+        "least-squares regression fits per group. R² shows how strongly the "
+        "X-axis predictor explains MME within each group; the p-value at the "
+        "top of each subplot is a Mann-Whitney U comparing the overall MME "
+        "distribution between groups."
     )
 
     detected_mme = detect_mme_variables(df_primary)
@@ -465,36 +467,64 @@ with tabs[3]:
             "to confirm what's present, then return here."
         )
     else:
-        mme_vars = st.multiselect(
-            "MME variables to plot",
-            options=detected_mme,
-            default=detected_mme,
-            key="mme_dist_vars",
-            help="Defaults to every numeric column whose name contains 'MME'.",
+        # Build the X-axis option list — any numeric column that's NOT the group
+        # column. Default to Duration_surgery if present, else Levels_involved.
+        x_options = [
+            c for c in df_primary.columns
+            if c != group_var and pd.api.types.is_numeric_dtype(df_primary[c])
+        ]
+        default_x = next(
+            (v for v in ["Duration_surgery", "Levels_involved", "Preop_MME"]
+             if v in x_options),
+            x_options[0] if x_options else None,
         )
+        cA, cB = st.columns([1, 2])
+        with cA:
+            x_var = st.selectbox(
+                "X-axis variable",
+                options=x_options,
+                index=x_options.index(default_x) if default_x in x_options else 0,
+                key="mme_dist_x",
+                help="The continuous predictor on the X-axis (default: "
+                     "Duration of surgery — the strongest covariate in the "
+                     "multivariate model).",
+            )
+            show_reg = st.checkbox(
+                "Show regression lines",
+                value=True, key="mme_dist_show_reg",
+            )
+        with cB:
+            mme_vars = st.multiselect(
+                "MME variables (Y-axis)",
+                options=detected_mme,
+                default=detected_mme,
+                key="mme_dist_vars",
+                help="One subplot per selected MME variable.",
+            )
 
         dist_fig = make_mme_distribution_figure(
             df_primary,
-            variables=mme_vars,
+            x_var=x_var,
+            y_vars=mme_vars,
             group_var=group_var,
             group0_label=group0_label,
             group1_label=group1_label,
             pretty_labels=cfg.get("pretty_labels", {}),
-            unit=mdd_unit,
+            show_regression=show_reg,
         )
         st.pyplot(dist_fig, use_container_width=True)
 
         if mme_vars:
             mme_dist_png = dist_fig_to_bytes(dist_fig, "png")
             mme_dist_pdf = dist_fig_to_bytes(dist_fig, "pdf")
-            cA, cB = st.columns(2)
-            with cA:
+            dA, dB = st.columns(2)
+            with dA:
                 _download_button(
                     "⬇️ MME distribution (PNG, 300dpi)",
                     mme_dist_png, "MME_Distribution.png", "image/png",
                     key="dl_dist_png",
                 )
-            with cB:
+            with dB:
                 _download_button(
                     "⬇️ MME distribution (PDF)",
                     mme_dist_pdf, "MME_Distribution.pdf", "application/pdf",
