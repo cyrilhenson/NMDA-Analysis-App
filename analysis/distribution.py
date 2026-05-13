@@ -219,9 +219,12 @@ def make_mme_strip_plot(
     group1_label: str = "Exposed",
     pretty_labels: dict | None = None,
     unit: str = "MME",
+    show_error_bars: bool = True,
 ):
     """Categorical-X strip plot: one column per exposure group, each patient
-    a single jittered dot. A short horizontal bar marks the group median.
+    a single dot at their MME value. Overlapping patients stack visibly via
+    layered transparency. Optionally an I-beam (median + IQR) sits to the
+    left of each column.
 
     Returns a matplotlib Figure. The grid auto-sizes (max 3 columns).
     Mann-Whitney U p-value annotated in each subplot title.
@@ -242,8 +245,6 @@ def make_mme_strip_plot(
     )
     axes = axes.flatten()
 
-    rng = np.random.RandomState(42)  # reproducible jitter
-
     for i, var in enumerate(variables):
         ax = axes[i]
         x0 = pd.to_numeric(
@@ -253,43 +254,44 @@ def make_mme_strip_plot(
             df.loc[df[group_var] == 1, var], errors="coerce"
         ).dropna().to_numpy()
 
-        # Jittered scatter — one dot per patient (slightly right of center
-        # so the IQR error-bar at center is fully visible)
+        # X positions of the two "columns" of dots and their I-beams
+        x_dot_0, x_bar_0 = 1.10, 0.80
+        x_dot_1, x_bar_1 = 2.10, 1.80
+
+        # Dots stack vertically at a single X per group. Overlapping patients
+        # at the same Y compound via alpha layering, producing a darker spot
+        # — that's the visual cue for "more patients here".
         ax.scatter(
-            1.18 + rng.uniform(-0.13, 0.13, len(x0)), x0,
-            color=_COLOR_GROUP0, alpha=0.78, s=42,
-            edgecolors="white", linewidths=0.7, zorder=3,
+            np.full(len(x0), x_dot_0), x0,
+            color=_COLOR_GROUP0, alpha=0.55, s=42,
+            edgecolors="white", linewidths=0.6, zorder=3,
         )
         ax.scatter(
-            2.18 + rng.uniform(-0.13, 0.13, len(x1)), x1,
-            color=_COLOR_GROUP1, alpha=0.85, s=42,
-            edgecolors="white", linewidths=0.7, zorder=3,
+            np.full(len(x1), x_dot_1), x1,
+            color=_COLOR_GROUP1, alpha=0.65, s=42,
+            edgecolors="white", linewidths=0.6, zorder=3,
         )
 
-        # Median + IQR error bars (Q1-Q3), placed to the left of each cloud.
-        # Classic "I-beam" shape: vertical IQR line with caps at Q1 and Q3,
-        # plus a wider horizontal median bar.
-        def _draw_errorbar(values, x_center, line_color, cap_half_width=0.05,
-                           median_half_width=0.13):
-            if len(values) == 0:
-                return
-            q1, med, q3 = np.percentile(values, [25, 50, 75])
-            # Vertical IQR line
-            ax.vlines(x_center, q1, q3, color=line_color,
-                      linewidth=2.0, zorder=4)
-            # Q1 and Q3 caps
-            ax.hlines([q1, q3],
-                      xmin=x_center - cap_half_width,
-                      xmax=x_center + cap_half_width,
-                      color=line_color, linewidth=2.0, zorder=4)
-            # Median (slightly wider, drawn last so it sits on top)
-            ax.hlines(med,
-                      xmin=x_center - median_half_width,
-                      xmax=x_center + median_half_width,
-                      color=line_color, linewidth=2.8, zorder=5)
+        # Optional median + IQR I-beam to the left of each column
+        if show_error_bars:
+            def _draw_errorbar(values, x_center, line_color,
+                               cap_half_width=0.05, median_half_width=0.13):
+                if len(values) == 0:
+                    return
+                q1, med, q3 = np.percentile(values, [25, 50, 75])
+                ax.vlines(x_center, q1, q3, color=line_color,
+                          linewidth=2.0, zorder=4)
+                ax.hlines([q1, q3],
+                          xmin=x_center - cap_half_width,
+                          xmax=x_center + cap_half_width,
+                          color=line_color, linewidth=2.0, zorder=4)
+                ax.hlines(med,
+                          xmin=x_center - median_half_width,
+                          xmax=x_center + median_half_width,
+                          color=line_color, linewidth=2.8, zorder=5)
 
-        _draw_errorbar(x0, 0.85, "#1f3d54")
-        _draw_errorbar(x1, 1.85, "#8a4d0f")
+            _draw_errorbar(x0, x_bar_0, "#1f3d54")
+            _draw_errorbar(x1, x_bar_1, "#8a4d0f")
 
         # Mann-Whitney U
         try:
@@ -297,7 +299,7 @@ def make_mme_strip_plot(
         except Exception:
             p = float("nan")
 
-        ax.set_xticks([1, 2])
+        ax.set_xticks([x_dot_0, x_dot_1])
         ax.set_xticklabels([
             f"{group0_label}\n(n = {len(x0)})",
             f"{group1_label}\n(n = {len(x1)})",
@@ -307,7 +309,7 @@ def make_mme_strip_plot(
         ax.set_ylabel(unit)
         ax.grid(True, axis="y", linestyle="--", alpha=0.4)
         ax.set_axisbelow(True)
-        ax.set_xlim(0.4, 2.6)
+        ax.set_xlim(0.55, 2.45)
 
     for j in range(n, len(axes)):
         axes[j].set_visible(False)

@@ -541,11 +541,12 @@ mme_strip_pdf = None
 with tabs[4]:
     st.subheader(f"MME by group — {group1_label} vs {group0_label}")
     st.caption(
-        "Each dot is one patient. Horizontal jitter is purely cosmetic so "
-        "overlapping values stay visible. The I-beam to the left of each "
-        "cloud shows the group median (thick bar) and interquartile range "
-        "(Q1 to Q3, vertical line with caps). P-values from Mann-Whitney U "
-        "(robust to non-normal MME data)."
+        "Each dot is one patient at their MME value. Dots stack vertically "
+        "at a single X position per group — patients with similar values "
+        "overlap, producing a darker spot where more cases cluster. The "
+        "optional I-beam to the left of each column shows the group median "
+        "(thick bar) and interquartile range (Q1 to Q3, with caps). "
+        "P-values from Mann-Whitney U (robust to non-normal MME data)."
     )
 
     if not detect_mme_variables(df_primary):
@@ -554,13 +555,24 @@ with tabs[4]:
             "to confirm what's present, then return here."
         )
     else:
-        strip_vars = st.multiselect(
-            "MME variables to plot",
-            options=detect_mme_variables(df_primary),
-            default=detect_mme_variables(df_primary),
-            key="mme_strip_vars",
-            help="Defaults to every numeric column whose name contains 'MME'.",
-        )
+        sC1, sC2 = st.columns([2, 1])
+        with sC1:
+            strip_vars = st.multiselect(
+                "MME variables to plot",
+                options=detect_mme_variables(df_primary),
+                default=detect_mme_variables(df_primary),
+                key="mme_strip_vars",
+                help="Defaults to every numeric column whose name contains "
+                     "'MME'.",
+            )
+        with sC2:
+            show_error_bars = st.checkbox(
+                "Show error bars (median + IQR)",
+                value=True, key="mme_strip_errorbars",
+                help="When on, an I-beam to the left of each column shows "
+                     "the group median (thick bar) and interquartile range "
+                     "(Q1 to Q3, with caps).",
+            )
 
         strip_fig = make_mme_strip_plot(
             df_primary,
@@ -570,6 +582,7 @@ with tabs[4]:
             group1_label=group1_label,
             pretty_labels=cfg.get("pretty_labels", {}),
             unit=mdd_unit,
+            show_error_bars=show_error_bars,
         )
         st.pyplot(strip_fig, use_container_width=True)
 
